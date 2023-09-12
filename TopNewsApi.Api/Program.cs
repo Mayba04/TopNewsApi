@@ -45,4 +45,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+
+
+UsersAndRolesInitializers.SeedUserAndRole(app);
 app.Run();
