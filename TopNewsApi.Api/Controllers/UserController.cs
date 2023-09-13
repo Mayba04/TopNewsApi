@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using TopNewsApi.Core.DTOs.User;
 using TopNewsApi.Core.Interfaces;
 using TopNewsApi.Core.Services;
+using TopNewsApi.Core.Validation.User;
 
 namespace TopNewsApi.Api.Controllers
 {
@@ -25,5 +29,57 @@ namespace TopNewsApi.Api.Controllers
         {
             return Ok((await _userService.GetAllAsync()).Payload);
         }
+
+
+        [HttpPost("Create")]
+        public async Task<IActionResult> Create(CreateUserDTO model)
+        {
+            var validator = new CreateUserValidation();
+            var validationResult = await validator.ValidateAsync(model);
+            if (validationResult.IsValid)
+            {
+                var result = await _userService.CreateUserAsync(model);
+                if (result.Success)
+                {
+                    return Ok(result.Payload);
+                }
+
+                return Ok(result.Payload);
+
+            }
+            return Ok(validationResult.Errors[0]);
+
+        }
+
+        [HttpPost("Delete")]
+        public async Task<IActionResult> Delete(DeleteUserDTO model)
+        {
+            var res = await _userService.GetUserByIdAsync(model.Id);
+            if (res.Success)
+            {
+                return Ok(res.Message);
+            }
+            return Ok(res.Message);
+        }
+
+        [HttpPost("EditUser")]
+        public async Task<IActionResult> EditUser(UpdateUserDTO model)
+        {
+            var validator = new UpdateUserValidation();
+            var validationResult = await validator.ValidateAsync(model);
+            if (validationResult.IsValid)
+            {
+                ServiceResponse result = await _userService.EditUserAsync(model);
+                if (result.Success)
+                {
+                    return Ok(result.Message);
+                }
+                return Ok(result.Message);
+            }
+ 
+            return Ok(validationResult.Errors[0]);
+        }
+
+
     }
 }
