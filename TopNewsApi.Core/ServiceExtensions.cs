@@ -19,6 +19,7 @@ namespace TopNewsApi.Core
         {
             services.AddTransient<UserService>();
             services.AddTransient<EmailServices>();
+            services.AddTransient<JwtService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IPostService, PostService>();
             services.AddScoped<IDashdoardAccessService, DashboardAccsessService>();

@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TopNewsApi.Core.Entities;
+using TopNewsApi.Core.Entities.Tokens;
 using TopNewsApi.Core.Entities.User;
 using TopNewsApi.Infrastructure.Initializers;
 using static Org.BouncyCastle.Math.EC.ECCurve;
@@ -25,7 +26,8 @@ namespace TopNewsApi.Infrastructure.Context
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<AppUser> AppUser { get; set; } 
+        public DbSet<AppUser> AppUser { get; set; }
+        public DbSet<RefreshToken> RefreshToken { get; set; }
         public DbSet<Post> Posts { get; set; } 
         public DbSet<Category> Categories  { get; set; }
 

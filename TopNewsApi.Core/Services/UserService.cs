@@ -23,8 +23,9 @@ namespace TopNewsApi.Core.Services
         private readonly IConfiguration _configuration;
         private readonly IMapper _mapper;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly JwtService _jwtService;
 
-        public UserService(RoleManager<IdentityRole> roleManager, UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IMapper mapper, IConfiguration configuration, EmailServices emailServices)
+        public UserService(JwtService jwtService, RoleManager<IdentityRole> roleManager, UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IMapper mapper, IConfiguration configuration, EmailServices emailServices)
         {
             _mapper = mapper;
             _userManager = userManager;
@@ -32,9 +33,10 @@ namespace TopNewsApi.Core.Services
             _configuration = configuration;
             _emailService = emailServices;
             _roleManager = roleManager;
+            _jwtService = jwtService;
         }
 
-        public async Task<ServiceResponse> LoginUserAsync(LoginDTO model)
+        public async Task<ServiceResponse> LoginUserAsync(LoginUserDto model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
@@ -46,40 +48,41 @@ namespace TopNewsApi.Core.Services
                 };
             }
 
-            SignInResult result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: true);/// failed login user
-            if (result.Succeeded)
+            var signinResult = await _signInManager.PasswordSignInAsync(user, model.Password, isPersistent: true, lockoutOnFailure: true);
+            if (signinResult.Succeeded)
             {
-                await _signInManager.SignInAsync(user, model.RememberMe);
-
+                var tokens = await _jwtService.GenerateJwtTokensAsync(user);
                 return new ServiceResponse
                 {
-                    Success = true,
-                    Message = "User successfully logged in."
+                    AccessToken = tokens.Token,
+                    RefreshToken = tokens.refreshToken.Token,
+                    Message = "User signed in successfully.",
+                    Success = true
                 };
             }
 
-            if (result.IsNotAllowed)
+            if (signinResult.IsNotAllowed)
             {
                 return new ServiceResponse
                 {
-                    Success = false,
-                    Message = "Confirm your email please."
+                    Message = "Confirm your email please.",
+                    Success = false
                 };
             }
 
-            if (result.IsLockedOut)
+            if (signinResult.IsLockedOut)
             {
                 return new ServiceResponse
                 {
-                    Success = false,
-                    Message = "User is locked. Connect with your site administrator."
+                    Message = "User is blocked connect to support.",
+                    Success = false
                 };
             }
 
             return new ServiceResponse
             {
-                Success = false,
-                Message = "User or password incorrect."
+                Message = "Login or password incorrect.",
+                Success = false
             };
         }
 
@@ -208,6 +211,11 @@ namespace TopNewsApi.Core.Services
                 Success = false,
                 Message = "Error"
             };
+        }
+
+        public async Task LogoutUserAsync()
+        {
+            await _signInManager.SignOutAsync();
         }
 
         public async Task<ServiceResponse> CreateUserAsync(CreateUserDTO model)

@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -80,6 +81,20 @@ namespace TopNewsApi.Api.Controllers
             return Ok(validationResult.Errors[0]);
         }
 
+        [AllowAnonymous]
+        [HttpPost("Login")]
+        public async Task<IActionResult> LoginUserAsync([FromBody] LoginUserDto model)
+        {
+            var validator = new LoginUserValid();
+            var validationResult = await validator.ValidateAsync(model);
+            if (validationResult.IsValid)
+            {
+                var result = await _userService.LoginUserAsync(model);
+                return Ok(result);
+            }
+
+            return BadRequest(validationResult.Errors[0].ToString());
+        }
 
     }
 }
