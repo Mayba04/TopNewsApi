@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Org.BouncyCastle.Crypto.Parameters;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using TopNewsApi.Core.DTOs.Token;
 using TopNewsApi.Core.Entities.Specifications;
 using TopNewsApi.Core.Entities.Tokens;
 using TopNewsApi.Core.Entities.User;
@@ -20,12 +22,14 @@ namespace TopNewsApi.Core.Services
         private readonly IConfiguration _configuration;
         private readonly IRepository<RefreshToken> _tokenRepo;
         private readonly UserManager<AppUser> _userManager;
+        private readonly TokenValidationParameters _validationParameters;
 
-        public JwtService(IConfiguration configuration, IRepository<RefreshToken> tokenRepo, UserManager<AppUser> userManager)
+        public JwtService(TokenValidationParameters validationParameters, IConfiguration configuration, IRepository<RefreshToken> tokenRepo, UserManager<AppUser> userManager)
         {
             _configuration = configuration;
             _tokenRepo = tokenRepo;
             _userManager = userManager;
+            _validationParameters = validationParameters;
         }
 
         public async Task Create(RefreshToken token)
@@ -111,6 +115,115 @@ namespace TopNewsApi.Core.Services
             return tokens;
 
 
+        }
+
+        public async Task<ServiceResponse> VerifyTokenAsync(TokenRequestDto tokenRequest)
+        {
+            var jwtTokenHandler = new JwtSecurityTokenHandler();
+
+            try
+            {
+                _validationParameters.ValidateLifetime = false;
+                var principal = jwtTokenHandler.ValidateToken(tokenRequest.Token, _validationParameters, out var validatedToken);
+                if (validatedToken is JwtSecurityToken jwtSecurityToken)
+                {
+                    var result = jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512, StringComparison.InvariantCultureIgnoreCase);
+                    if (result == false)
+                    {
+                        return null;
+                    }
+                }
+
+                var utcExpireDate = long.Parse(principal.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Exp).Value);
+                var expDate = UnixTimeStampToDateTime(utcExpireDate);
+                if (expDate > DateTime.UtcNow)
+                {
+                    return new ServiceResponse
+                    {
+                        Errors = new List<string>() { "Cannot refresh token. Token expired." },
+                        Success = false
+                    };
+                }
+
+                var storedToken = await Get(tokenRequest.RefreshToken);
+                if (storedToken == null)
+                {
+                    return new ServiceResponse
+                    {
+                        Errors = new List<string>() { "Refrest token not found." },
+                        Success = false
+                    };
+                }
+
+                if (DateTime.UtcNow > storedToken.ExpireDate)
+                {
+                    return new ServiceResponse
+                    {
+                        Errors = new List<string>() { "Token has been expired." },
+                        Success = false
+                    };
+                }
+
+                if (storedToken.IsUsed)
+                {
+                    return new ServiceResponse
+                    {
+                        Errors = new List<string>() { "Token has been used." },
+                        Success = false
+                    };
+                }
+
+                if (storedToken.IsRevoked)
+                {
+                    return new ServiceResponse
+                    {
+                        Errors = new List<string>() { "Token has been revoked." },
+                        Success = false
+                    };
+                }
+
+                var jti = principal.Claims.SingleOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+                if (storedToken.JwtId != jti)
+                {
+
+                    return new ServiceResponse
+                    {
+                        Errors = new List<string>() { "Token doesn't match the saved token." },
+                        Success = false
+                    };
+                }
+
+                storedToken.IsUsed = true;
+                await Update(storedToken);
+                var dbUser = await _userManager.FindByIdAsync(storedToken.UserId);
+                var tokens = await GenerateJwtTokensAsync(dbUser);
+
+                return new ServiceResponse
+                {
+                    Message = "Token successfully updated.",
+                    Success = true,
+                    AccessToken = tokens.Token,
+                    RefreshToken = tokens.refreshToken.Token
+                };
+
+
+            }
+            catch (Exception ex)
+            {
+
+                return new ServiceResponse
+                {
+                    Message = ex.Message,
+                    Success = false
+                };
+            }
+        }
+
+        private DateTime UnixTimeStampToDateTime(double unixTimeStamp)
+        {
+            System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
+            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToUniversalTime();
+            return dtDateTime;
         }
 
 

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TopNewsApi.Core.DTOs.Login;
+using TopNewsApi.Core.DTOs.Token;
 using TopNewsApi.Core.DTOs.User;
 using TopNewsApi.Core.Entities.User;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -84,6 +85,11 @@ namespace TopNewsApi.Core.Services
                 Message = "Login or password incorrect.",
                 Success = false
             };
+        }
+
+        public async Task<ServiceResponse> RefreshTokenAsync(TokenRequestDto model)
+        {
+            return await _jwtService.VerifyTokenAsync(model);
         }
 
         public async Task<ServiceResponse> SignOutAsync()
