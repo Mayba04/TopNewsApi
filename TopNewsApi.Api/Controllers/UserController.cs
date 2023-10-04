@@ -97,6 +97,14 @@ namespace TopNewsApi.Api.Controllers
             return BadRequest(validationResult.Errors[0].ToString());
         }
 
+        [HttpGet("LogOut")]
+        public async Task<IActionResult> LogOut(string userId)
+        {
+            await _userService.DeleteAllRefreshTokenByUserIdAsync(userId);
+            await _userService.SignOutAsync();
+            return Ok();
+        }
+
         [AllowAnonymous]
         [HttpPost("RefreshToken")]
         public async Task<IActionResult> RefreshTokenAsync([FromBody] TokenRequestDto model)

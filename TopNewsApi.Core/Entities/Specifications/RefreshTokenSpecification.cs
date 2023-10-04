@@ -18,5 +18,13 @@ namespace TopNewsApi.Core.Entities.Specifications
                 Query.Where(t => t.Token == refreshToken);
             }
         }
+
+        public class GetAllTokensByUserId : Specification<RefreshToken>
+        {
+            public GetAllTokensByUserId(string userId)
+            {
+                Query.Where(t => t.UserId == userId);
+            }
+        }
     }
 }

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using TopNewsApi.Core.DTOs.Login;
 using TopNewsApi.Core.DTOs.Token;
 using TopNewsApi.Core.DTOs.User;
+using TopNewsApi.Core.Entities.Tokens;
 using TopNewsApi.Core.Entities.User;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -90,6 +91,15 @@ namespace TopNewsApi.Core.Services
         public async Task<ServiceResponse> RefreshTokenAsync(TokenRequestDto model)
         {
             return await _jwtService.VerifyTokenAsync(model);
+        }
+
+        public async Task DeleteAllRefreshTokenByUserIdAsync(string userId)
+        {
+            IEnumerable<RefreshToken> refreshTokens = await _jwtService.GetByUserIdAsync(userId);
+            foreach (RefreshToken refreshToken in refreshTokens)
+            {
+                await _jwtService.Delete(refreshToken);
+            }
         }
 
         public async Task<ServiceResponse> SignOutAsync()
@@ -314,13 +324,6 @@ namespace TopNewsApi.Core.Services
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var encodedToken = Encoding.UTF8.GetBytes(token);
             var validEmailToken = WebEncoders.Base64UrlEncode(encodedToken);
-
-            //string url = $"{_configuration["HostSettings:URL"]}/Dashboard/confirmemail?userId={user.Id}&token={validEmailToken}";
-            //var url = $"{_configuration["HostSettings:URL"]}/Dashboard/confirmemail?userid={user.Id}&token={validEmailToken}";
-            //string emailBody = $"<h1>Conform your email please.</h1><a href='{url}'>Confirm now!</a>";
-
-            //await _emailServices.SendEmail(user.Email, "Email confirmation.", emailBody);
-
             var url = $"{_configuration["HostSettings:URL"]}/Dashboard/confirmemail?userid={user.Id}&token={validEmailToken}";
 
             string emailBody = $"<h1>Confirm your email please.</h1><a href='{url}'>Confirm now!</a>";

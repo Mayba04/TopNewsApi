@@ -62,6 +62,11 @@ namespace TopNewsApi.Core.Services
             await _tokenRepo.Save();
         }
 
+        public async Task<IEnumerable<RefreshToken>> GetByUserIdAsync(string userId)
+        {
+            IEnumerable<RefreshToken> refreshTokens = await _tokenRepo.GetListBySpec(new RefreshTokenSpecification.GetAllTokensByUserId(userId));
+            return refreshTokens;
+        }
 
         public async Task<Tokens> GenerateJwtTokensAsync(AppUser user)
         {
