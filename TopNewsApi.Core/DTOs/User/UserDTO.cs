@@ -15,5 +15,6 @@ namespace TopNewsApi.Core.DTOs.User
         public bool EmailConfirmed { get; set; } = false;
         public string LockedOut { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
     }
 }

@@ -37,7 +37,13 @@ namespace TopNewsApi.Infrastructure.Initializers
                     {
                         Name = "Administrator",
                         NormalizedName = "ADMINISTRATOR"
-                    });
+                    },
+                    new IdentityRole()
+                    {
+                        Name = "User",
+                        NormalizedName = "USER"
+                    }
+                    );
 
                   
                     await context.SaveChangesAsync();

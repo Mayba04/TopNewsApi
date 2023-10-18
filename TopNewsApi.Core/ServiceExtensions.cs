@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using TopNewsApi.Core.AutoMapper.Categories;
 using TopNewsApi.Core.AutoMapper.Ip;
 using TopNewsApi.Core.AutoMapper.Posts;
+using TopNewsApi.Core.AutoMapper.Roles;
 using TopNewsApi.Core.AutoMapper.User;
 using TopNewsApi.Core.Interfaces;
 using TopNewsApi.Core.Services;
@@ -18,6 +19,7 @@ namespace TopNewsApi.Core
         public static void AddCoreServices(this IServiceCollection services)
         {
             services.AddTransient<UserService>();
+            services.AddTransient<RolesService>();
             services.AddTransient<EmailServices>();
             services.AddTransient<JwtService>();
             services.AddScoped<ICategoryService, CategoryService>();
@@ -31,6 +33,7 @@ namespace TopNewsApi.Core
             services.AddAutoMapper(typeof(AutoMapperCategoryProfile));
             services.AddAutoMapper(typeof(AutoMapperPostProfile));
             services.AddAutoMapper(typeof(AutoMapperDashboardAccsessProfile));
+            services.AddAutoMapper(typeof(AutoMapperRolesProfile));
         }
     }
 }

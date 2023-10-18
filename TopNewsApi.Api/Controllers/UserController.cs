@@ -1,7 +1,9 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TopNewsApi.Core.DTOs.Token;
 using TopNewsApi.Core.DTOs.User;
@@ -11,6 +13,7 @@ using TopNewsApi.Core.Validation.User;
 
 namespace TopNewsApi.Api.Controllers
 {
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
@@ -19,21 +22,47 @@ namespace TopNewsApi.Api.Controllers
         private readonly UserService _userService;
         private readonly ICategoryService _categoryService;
         private readonly IDashdoardAccessService _IPService;
-        public UserController(UserService userService, ICategoryService categoryService, IDashdoardAccessService iPService)
+        private readonly RolesService _rolesService;
+        private readonly RoleManager<IdentityRole> _rolesManager;
+
+        public UserController(UserService userService, ICategoryService categoryService, IDashdoardAccessService iPService, RolesService rolesService, RoleManager<IdentityRole> rolesManager)
         {
             _userService = userService;
             _categoryService = categoryService;
             _IPService = iPService;
+            _rolesService = rolesService;
+            _rolesManager = rolesManager;
         }
 
         [HttpGet("GetAll")]
         public async Task<IActionResult> GetAll()
         {
-            return Ok((await _userService.GetAllAsync()).Payload);
+            return Ok((await _userService.GetAllAsync()));
         }
 
 
-        [HttpPost("Create")]
+        [HttpGet("GetAllRoles")]
+        public async Task<IActionResult> GetAlRoles()
+        {
+            return Ok((await _rolesService.GetAllRolesAsync()));
+        }
+
+        [HttpGet("getUserById")]
+        public async Task<IActionResult> GetUserById(string userId)
+        {
+            var result = await _userService.GetUserByIdAsync(userId);
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            else
+            {
+                return BadRequest(result);
+            }
+        }
+
+
+        [HttpPost("CreatUser")]
         public async Task<IActionResult> Create(CreateUserDTO model)
         {
             var validator = new CreateUserValidation();
@@ -53,16 +82,23 @@ namespace TopNewsApi.Api.Controllers
 
         }
 
-        [HttpPost("Delete")]
-        public async Task<IActionResult> Delete(DeleteUserDTO model)
+        [Authorize(Roles = "Administrator")]
+        [HttpPost("DeleteUser")]
+        public async Task<IActionResult> DeleteUserAsync([FromBody] string id)
         {
-            var res = await _userService.GetUserByIdAsync(model.Id);
-            if (res.Success)
+            var result = await _userService.DeleteUserAsync(id);
+            if (result.Success)
             {
-                return Ok(res.Message);
+                return Ok(result);
             }
-            return Ok(res.Message);
+            else
+            {
+                return BadRequest(result);
+            }
         }
+
+
+
 
         [HttpPost("EditUser")]
         public async Task<IActionResult> EditUser(UpdateUserDTO model)
@@ -111,6 +147,43 @@ namespace TopNewsApi.Api.Controllers
         {
             var result = await _userService.RefreshTokenAsync(model);
             return Ok(result);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("ConfirmEmail")]
+        public async Task<IActionResult> ConfirmEmailAsync(string userId, string token)
+        {
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+                return NotFound();
+
+            var result = await _userService.ConfirmEmailAsync(userId, token);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            return BadRequest(result);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("ForgotPassword")]
+        public async Task<IActionResult> ForgotPasswordAsync([FromBody] string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return NotFound();
+            }
+
+            var result = await _userService.ForgotPasswordAsync(email);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            else
+            {
+                return BadRequest(result);
+            }
         }
 
     }

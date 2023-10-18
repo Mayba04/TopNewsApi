@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using TopNewsApi.Core.DTOs.Login;
 using TopNewsApi.Core.DTOs.Token;
 using TopNewsApi.Core.DTOs.User;
+using TopNewsApi.Core.Entities.Roles;
 using TopNewsApi.Core.Entities.Tokens;
 using TopNewsApi.Core.Entities.User;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -236,54 +237,40 @@ namespace TopNewsApi.Core.Services
 
         public async Task<ServiceResponse> CreateUserAsync(CreateUserDTO model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user != null)
+            if(model.Password != model.ConfirmPassword)
             {
                 return new ServiceResponse
                 {
-                    Message = "User exists.",
-                    Success = false,
+                    Message = "Confirm pssword do not match",
+                    Success = false
                 };
             }
 
-            var mappedUser = _mapper.Map<CreateUserDTO, AppUser>(model);
-           
-            var acount = await _userManager.CreateAsync(mappedUser, model.Password);
+            var newUser = _mapper.Map<CreateUserDTO, AppUser>(model);
+            var result = await _userManager.CreateAsync(newUser, model.Password);
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(newUser, model.Role);
 
-            if (!acount.Succeeded)
+                await SendConfirmationEmailAsync(newUser);
+
+                var tokens = await _jwtService.GenerateJwtTokensAsync(newUser);
+
+                return new ServiceResponse
+                {
+                    Message = "User successfully created.",
+                    Success = true
+                };
+            }
+            else
             {
                 return new ServiceResponse
                 {
+                    Message = "Error user not created.",
                     Success = false,
-                    Message = "Error creating"
+                    Errors = result.Errors.Select(e => e.Description)
                 };
             }
-            
-            var roles = await _userManager.AddToRoleAsync(mappedUser, model.Role);
-
-           await SendConfirmationEmailAsync(mappedUser);
-
-            if (!roles.Succeeded) 
-            {
-                return new ServiceResponse
-                {
-                    Success = false,
-                    Message = "Error creating"
-                };
-            }
-            List<IdentityError> errorList = roles.Errors.ToList();
-            string errors = "";
-            foreach (var error in errorList)
-            {
-                errors = errors + error.Description.ToList();
-            }
-
-            return new ServiceResponse
-            {
-                Success = false,
-                Message = "Error",
-                Payload = errors
-            };
         }
 
 
