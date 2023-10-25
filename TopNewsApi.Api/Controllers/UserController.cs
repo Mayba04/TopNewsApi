@@ -97,9 +97,6 @@ namespace TopNewsApi.Api.Controllers
             }
         }
 
-
-
-
         [HttpPost("EditUser")]
         public async Task<IActionResult> EditUser(UpdateUserDTO model)
         {

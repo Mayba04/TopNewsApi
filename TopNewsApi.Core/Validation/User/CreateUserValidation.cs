@@ -21,6 +21,7 @@ namespace TopNewsApi.Core.Validation.User
             RuleFor(r => r.ConfirmPassword).NotEmpty().WithMessage("Filed must not be empty").
                 MinimumLength(6).WithMessage("Password must be at least 6 characters").
                 Equal(p => p.Password).WithMessage("The verification password is incorrect");
+            RuleFor(r => r.PhoneNumber).NotEmpty();
         }
     }
    
